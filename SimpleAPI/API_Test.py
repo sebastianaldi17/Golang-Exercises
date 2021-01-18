@@ -15,6 +15,19 @@ print(res)
 print(res.json())
 time.sleep(1)
 
+# Create second account [should return code 201]
+account = {
+    "id": 11,
+    "first_name": "Se",
+    "last_name": "Al",
+    "user_name": "Nald"
+}
+print("Attempting to create second account... [Should return 201]")
+res = requests.post("http://localhost:8080/accounts", json=account)
+print(res)
+print(res.json())
+time.sleep(1)
+
 # Create broken account (incomplete field) [should return error code 400]
 account = {
     "id": 123,
@@ -54,7 +67,7 @@ time.sleep(1)
 
 # Try deleting nonexistant ID (should be 404)
 print("Attempting to DELETE nonexistant account... [Should return 404]")
-res = requests.delete("http://localhost:8080/accounts/123")
+res = requests.delete("http://localhost:8080/accounts/999")
 print(res)
 time.sleep(1)
 

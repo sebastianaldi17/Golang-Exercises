@@ -8,8 +8,10 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -35,13 +37,58 @@ func main() {
 	accountMap = make(map[string]Account)
 	r := mux.NewRouter()
 	r.HandleFunc("/", homePageHandler).Methods("GET")
+	r.HandleFunc("/accounts", accountPageHaandler).Methods("GET")
 	r.HandleFunc("/accounts", createAccountHandler).Methods("POST")
 	r.HandleFunc("/accounts/{id}", getAccountHandler).Methods("GET")
 	r.HandleFunc("/accounts/{id}", deleteAccountHandler).Methods("DELETE")
+
+	if fileExists("db.json") {
+		// Load json file
+		jsonFile, err := os.Open("db.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		byteData, _ := ioutil.ReadAll(jsonFile)
+		json.Unmarshal(byteData, &accountMap)
+		log.Print("Existing db.json file found: ", accountMap)
+
+	} else {
+		log.Print("No existing db.json file found.")
+		// Create json file
+		file, err := os.Create("db.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		file.Close()
+	}
+
 	log.Print("Starting API at port 8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
+// IO Operations
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func saveToFile() {
+	data, err := json.MarshalIndent(accountMap, "", " ")
+	if err != nil {
+		log.Print("An error occured while converting map to json.")
+		log.Fatal(err)
+	}
+	err = ioutil.WriteFile("db.json", data, 0644)
+	if err != nil {
+		log.Print("An error occured while writing to file.")
+		log.Fatal(err)
+	}
+}
+
+// Handlers
 func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print("Request came through to Home Page")
 	w.Header().Add("Content-Type", "application/json")
@@ -53,6 +100,12 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(accountMap)
+}
+
+func accountPageHaandler(w http.ResponseWriter, r *http.Request) {
+	// Tells user to use POST instead of GET
+	// This can be replaced with a form that POSTS to itself (Potential feature)
+	http.Error(w, "Please use POST instead of GET when trying to create a new account.", http.StatusMethodNotAllowed)
 }
 
 func createAccountHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,6 +140,9 @@ func createAccountHandler(w http.ResponseWriter, r *http.Request) {
 	id := strconv.Itoa(account.ID)
 	accountMap[id] = account
 	log.Print("Added ", account, " to list of accounts. List: ", accountMap)
+
+	saveToFile()
+
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(account)
@@ -117,6 +173,9 @@ func deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if key {
 		delete(accountMap, id)
 		log.Print("ID ", id, " is successfully deleted. New list: ", accountMap)
+
+		saveToFile()
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w)
 	} else {
