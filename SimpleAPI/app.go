@@ -37,7 +37,7 @@ func main() {
 	accountMap = make(map[string]Account)
 	r := mux.NewRouter()
 	r.HandleFunc("/", homePageHandler).Methods("GET")
-	r.HandleFunc("/accounts", accountPageHaandler).Methods("GET")
+	r.HandleFunc("/accounts", accountPageHandler).Methods("GET")
 	r.HandleFunc("/accounts", createAccountHandler).Methods("POST")
 	r.HandleFunc("/accounts/{id}", getAccountHandler).Methods("GET")
 	r.HandleFunc("/accounts/{id}", deleteAccountHandler).Methods("DELETE")
@@ -102,7 +102,7 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(accountMap)
 }
 
-func accountPageHaandler(w http.ResponseWriter, r *http.Request) {
+func accountPageHandler(w http.ResponseWriter, r *http.Request) {
 	// Tells user to use POST instead of GET
 	// This can be replaced with a form that POSTS to itself (Potential feature)
 	http.Error(w, "Please use POST instead of GET when trying to create a new account.", http.StatusMethodNotAllowed)

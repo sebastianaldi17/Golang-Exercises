@@ -6,9 +6,50 @@
         <h1>Go Link Shortener</h1>
         <ul>
             {{range .Links}}
-                <li><a href="{{.URL}}">{{.ID}}</a></li>
+                <li><a href="{{.URL}}">{{.ID}} - {{.URL}}</a> </li>
             {{end}}
         </ul>
-        
+        <form id="urlForm">
+            <label>URL to shorten:</label><br>
+            <input type="text" id="url" name="url"><br>
+            <input type="submit" value="Shorten">
+        </form>
+
+        <script>
+            // This seems needlessly complex, hit me up if anyone knows a simpler way
+            // Reference: https://dev.to/amjadmh73/submit-html-forms-to-json-apis-easily-137l
+            const form = document.querySelector("#urlForm");
+            if(form) {
+                form.addEventListener("submit", function(e) {
+                    submitForm(e, this)
+                })
+            }
+
+            function submitForm(e, form) {
+                e.preventDefault()
+
+                const headers = {
+                    "Content-Type": "application/json",
+                };
+                const jsonFormData = {}
+                for(const pair of new FormData(form)) {
+                    jsonFormData[pair[0]] = pair[1]
+                }
+
+                try {
+                    const repone = fetch("/url", {
+                        method: "POST",
+                        headers: headers,
+                        body: JSON.stringify(jsonFormData)
+                    })
+                    window.location.reload()
+                } catch(err) {
+                    console.error(`Error during POST: ${err}`)
+                    alert("An error occured while trying to shorten link.")
+                    throw err
+                }
+
+            }
+        </script>
     </body>
 </html>

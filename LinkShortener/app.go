@@ -1,8 +1,9 @@
 // go build app.go && app.exe
 // TODO:
-// Add form at home page to shorten a website
 // URL validation (string validation, or try to send a request to the specified webpage)
 // Maybe make the home page more prettier? CSS might help
+// Add support for custom link
+// Custom link validation (must be alphanumeric, no special characters and whitespace)
 
 package main
 
@@ -46,7 +47,9 @@ func main() {
 	// Set handlers
 	r.HandleFunc("/", getHomePage).Methods("GET")
 	r.HandleFunc("/url", generateShortLink).Methods("POST")
+	r.HandleFunc("/url", getShortLinks).Methods("GET")
 	r.HandleFunc("/url/{id}", redirectURL).Methods("GET")
+	r.HandleFunc("/url/{id}", deleteShortLink).Methods("DELETE")
 
 	if fileExists("db.json") {
 		// Load json file
@@ -109,15 +112,27 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 	p := &content{Links: linkMap}
 	t, _ := template.ParseFiles("index.html")
 	t.Execute(w, p)
-	// w.Header().Add("Content-Type", "application/json")
-	// _, err := json.Marshal(linkMap)
-	// if err != nil {
-	// 	log.Print(err)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
-	// w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(linkMap)
+}
+
+// Delete shortened link
+func deleteShortLink(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id := params["id"]
+	log.Print("Request received to delete link with ID ", id)
+	_, key := linkMap[id]
+	if key {
+		delete(linkMap, id)
+		log.Print("ID ", id, " is successfully deleted. New list: ", linkMap)
+
+		saveToFile()
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w)
+	} else {
+		log.Print("ID ", id, " not found. [For DELETE]")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w)
+	}
 }
 
 // Generate new shortened link (randomize the shortened URL)
@@ -132,6 +147,9 @@ func generateShortLink(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	log.Print("Request came through to shorten link ", link.URL)
+
 	// Check extra fields with decoder.More() (returns boolean) if needed
 
 	// Generate random string for the ID (overwrites ID from POST request if specified)
@@ -146,9 +164,21 @@ func generateShortLink(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(link)
 }
 
+func getShortLinks(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	_, err := json.Marshal(linkMap)
+	if err != nil {
+		log.Print(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(linkMap)
+}
+
 // Redirect to shortened link
 func redirectURL(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r) // Gets the :id from the URL
+	params := mux.Vars(r)
 	id := params["id"]
 	log.Print("Request received to get URL with shortened link ", id)
 	link, key := linkMap[id]
