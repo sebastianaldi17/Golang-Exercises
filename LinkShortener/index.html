@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <title>Go Link Shortener</title>
+    </head>
+    <body>
+        <h1>Go Link Shortener</h1>
+        <ul>
+            {{range .Links}}
+                <li><a href="{{.URL}}">{{.ID}}</a></li>
+            {{end}}
+        </ul>
+        
+    </body>
+</html>
