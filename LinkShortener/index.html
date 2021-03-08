@@ -1,55 +1,73 @@
 <html>
-    <head>
-        <title>Go Link Shortener</title>
-    </head>
-    <body>
-        <h1>Go Link Shortener</h1>
-        <ul>
-            {{range .Links}}
+
+<head>
+    <title>Go Link Shortener</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <h1>Go Link Shortener</h1>
+            <p>A link shortener (such as Bitly, TinyUrl) made using <code>Go</code>. Even this html page is served in <code>Go</code>.</p>
+        </div>
+        <hr>
+        <div class="row">
+            <ul>
+                {{range .Links}}
                 <li><a href="{{.URL}}">{{.ID}} - {{.URL}}</a> </li>
-            {{end}}
-        </ul>
-        <form id="urlForm">
-            <label>URL to shorten:</label><br>
-            <input type="text" id="url" name="url"><br>
-            <input type="submit" value="Shorten">
-        </form>
+                {{end}}
+            </ul>
+        </div>
+        <hr>
+        <div class="row">
+            <form id="urlForm">
+                <p>URL to shorten:</p>
+                <input type="text" id="url" name="url"><br>
+                <input class="button-primary" type="submit" value="Shorten">
+            </form>
+        </div>
+    </div>
 
-        <script>
-            // This seems needlessly complex, hit me up if anyone knows a simpler way
-            // Reference: https://dev.to/amjadmh73/submit-html-forms-to-json-apis-easily-137l
-            const form = document.querySelector("#urlForm");
-            if(form) {
-                form.addEventListener("submit", function(e) {
-                    submitForm(e, this)
+    <script>
+        // This seems needlessly complex, hit me up if anyone knows a simpler way
+        // Reference: https://dev.to/amjadmh73/submit-html-forms-to-json-apis-easily-137l
+        const form = document.querySelector("#urlForm");
+        if (form) {
+            form.addEventListener("submit", function (e) {
+                submitForm(e, this)
+            })
+        }
+
+        async function submitForm(e, form) {
+            e.preventDefault()
+
+            const headers = {
+                "Content-Type": "application/json",
+            };
+            const jsonFormData = {}
+            for (const pair of new FormData(form)) {
+                jsonFormData[pair[0]] = pair[1]
+            }
+
+            try {
+                const response = await fetch("/url", {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(jsonFormData)
                 })
-            }
-
-            function submitForm(e, form) {
-                e.preventDefault()
-
-                const headers = {
-                    "Content-Type": "application/json",
-                };
-                const jsonFormData = {}
-                for(const pair of new FormData(form)) {
-                    jsonFormData[pair[0]] = pair[1]
-                }
-
-                try {
-                    const repone = fetch("/url", {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify(jsonFormData)
-                    })
+                if(response.ok) {
                     window.location.reload()
-                } catch(err) {
-                    console.error(`Error during POST: ${err}`)
-                    alert("An error occured while trying to shorten link.")
-                    throw err
+                } else {
+                    alert("An error occured while trying to shorten link. Check if the specified link is valid.")
                 }
-
+            } catch (err) {
+                console.error(`Error during POST: ${err}`)
+                alert("An error occured while trying to shorten link.")
             }
-        </script>
-    </body>
+
+        }
+    </script>
+</body>
+
 </html>

@@ -1,9 +1,7 @@
 // go build app.go && app.exe
 // TODO:
-// URL validation (string validation, or try to send a request to the specified webpage)
-// Maybe make the home page more prettier? CSS might help
-// Add support for custom link
-// Custom link validation (must be alphanumeric, no special characters and whitespace)
+// Add logging to .log file
+// Maybe make the home page more prettier? Adding CSS colors might help
 
 package main
 
@@ -13,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"text/template"
 	"time"
@@ -75,10 +74,42 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
+func isLetter(s string) bool {
+	// Ref: https://stackoverflow.com/questions/38554353/how-to-check-if-a-string-only-contains-alphabetic-characters-in-go
+	for _, r := range s {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') {
+			return false
+		}
+	}
+	return true
+}
+
+func isValidURL(testurl string) bool {
+	// Ref: https://golangcode.com/how-to-check-if-a-string-is-a-url/
+	// Might want to test by sending a request, but this might be a potential security isssue
+	_, err := url.ParseRequestURI(testurl)
+	if err != nil {
+		return false
+	}
+
+	u, err := url.Parse(testurl)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return false
+	}
+
+	return true
+}
+
 func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+	key := true
+	var b []byte
+	// Prevent random key collision (highly unlikely but nice to have)
+	for key == true {
+		b = make([]byte, n)
+		for i := range b {
+			b[i] = letters[rand.Intn(len(letters))]
+		}
+		_, key = linkMap[string(b)]
 	}
 	return string(b)
 }
@@ -139,7 +170,8 @@ func deleteShortLink(w http.ResponseWriter, r *http.Request) {
 func generateShortLink(w http.ResponseWriter, r *http.Request) {
 	var link Link
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
+	// Uncomment line below to strictly allow known fields only
+	// decoder.DisallowUnknownFields()
 	err := decoder.Decode(&link)
 
 	if err != nil {
@@ -148,14 +180,34 @@ func generateShortLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if link is valid
+	if !isValidURL(link.URL) {
+		http.Error(w, "The specified URL is invalid.", http.StatusBadRequest)
+		return
+	}
+
 	log.Print("Request came through to shorten link ", link.URL)
 
-	// Check extra fields with decoder.More() (returns boolean) if needed
-
 	// Generate random string for the ID (overwrites ID from POST request if specified)
-	id := randString(6)
-	link.ID = id
-	linkMap[id] = link
+	if link.ID == "" {
+		id := randString(6)
+		link.ID = id
+	} else {
+		// Check if custom ID consists of letters only
+		if !isLetter(link.ID) {
+			http.Error(w, "The requested custom ID must consist of letters only.", http.StatusBadRequest)
+			return
+		}
+
+		_, key := linkMap[link.ID]
+		// Check if custom ID is in use
+		if key {
+			http.Error(w, "The requested custom ID is in use.", http.StatusConflict)
+			return
+		}
+	}
+
+	linkMap[link.ID] = link
 
 	saveToFile()
 
