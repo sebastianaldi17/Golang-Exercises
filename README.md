@@ -6,3 +6,6 @@ The hello world for CRUD API making. Account creation and update via POST, read 
 
 ## LinkShortener
 Link shortener like bit.ly and tinyurl. Uses `gorilla/mux` for routing and serving html files.
+
+## QuizGame
+Quiz game that reads from a two column csv file (containing the question on the first column and the answer on the second column). Uses a timer and goroutine to set a time limit for the quiz.
