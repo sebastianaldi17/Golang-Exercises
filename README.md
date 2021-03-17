@@ -9,3 +9,6 @@ Link shortener like bit.ly and tinyurl. Uses `gorilla/mux` for routing and servi
 
 ## QuizGame
 Quiz game that reads from a two column csv file (containing the question on the first column and the answer on the second column). Uses a timer and goroutine to set a time limit for the quiz.
+
+## RediGoCasino
+A command line "casino" game using `redis` as a database. Uses `redigo` so that `go` can interact with `redis`.
