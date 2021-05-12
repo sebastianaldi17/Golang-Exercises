@@ -13,6 +13,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+// For docker:
+// Without persistence: `docker run -p 6379:6379 --name redigocasino -d redis`
+// With persistence: `docker run -p 6379:6379 --name redigocasino -d redis redis-server --appendonly yes`
 // Check if name only consists of letters, numbers and space
 func validName(name string) bool {
 	const allowed = "abcdefghijklmnopqrstuvwxyz1234567890 "
