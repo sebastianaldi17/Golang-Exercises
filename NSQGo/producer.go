@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/nsqio/go-nsq"
 )
@@ -14,7 +17,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	messageBody := []byte("hello")
+	// Prompt for name in standard input
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("What is your message?")
+	message, err := reader.ReadString('\n')
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	messageBody := []byte(message)
 	topicName := "topic"
 
 	// Synchronously publish a single message to the specified topic.
@@ -26,5 +38,4 @@ func main() {
 
 	// Gracefully stop the producer.
 	producer.Stop()
-
 }

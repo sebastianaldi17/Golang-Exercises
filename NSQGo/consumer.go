@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"log"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/nsqio/go-nsq"
 )
@@ -10,21 +13,16 @@ import (
 // HandleMessage implements the Handler interface.
 func HandleMessage(m *nsq.Message) error {
 	if len(m.Body) == 0 {
-		// Returning nil will automatically send a FIN command to NSQ to mark the message as processed.
-		return nil
+		// Returning a non-nil error will automatically send a REQ command to NSQ to re-queue the message.
+		return errors.New("Empty string")
 	}
+	log.Printf("Got a new message: %v\n", string(m.Body))
 
-	message := string(m.Body)
-	log.Printf("Got a new message: %v\n", message)
-
-	// Returning a non-nil error will automatically send a REQ command to NSQ to re-queue the message.
+	// Returning nil will automatically send a FIN command to NSQ to mark the message as processed.
 	return nil
 }
 
 func main() {
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
 	// Instantiate a consumer that will subscribe to the provided channel.
 	config := nsq.NewConfig()
 	consumer, err := nsq.NewConsumer("topic", "channel", config)
@@ -34,11 +32,7 @@ func main() {
 
 	// Set the Handler for messages received by this Consumer. Can be called multiple times.
 	// See also AddConcurrentHandlers.
-	consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
-		log.Printf("Got a message: %v", string(message.Body))
-		wg.Done()
-		return nil
-	}))
+	consumer.AddHandler(nsq.HandlerFunc(HandleMessage))
 
 	// Use nsqlookupd to discover nsqd instances.
 	// See also ConnectToNSQD, ConnectToNSQDs, ConnectToNSQLookupds.
@@ -47,7 +41,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	wg.Wait()
+	// Prevents program from terminating
+	// Use ctrl+c to stop the program
+	quitChannel := make(chan os.Signal, 1)
+	signal.Notify(quitChannel, syscall.SIGINT, syscall.SIGTERM)
+	<-quitChannel
 
 	// Gracefully stop the consumer.
 	consumer.Stop()
